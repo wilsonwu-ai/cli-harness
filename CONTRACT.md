@@ -7,7 +7,7 @@ This is the frozen interface. Tests are written from this file, and the code is 
 ## What the skill does
 `/cli-harness <binary>` turns ONE executable that is already installed on PATH (for example `sqlite3` or `ffmpeg`) into a harness. A harness is a thin, tested Click wrapper that shells out to the real binary, plus an auto-generated SKILL.md, so agents can drive the binary safely. The skill never clones, downloads or pip-installs anything.
 
-## Repo layout (Claude Code plugin, mirrors fable-advisor)
+## Repo layout (Claude Code plugin)
 ```
 .claude-plugin/plugin.json        name "cli-harness", version "0.1.0", license "Apache-2.0", author {name "Wilson Wu", url "https://github.com/wilsonwu-ai"}, homepage "https://github.com/wilsonwu-ai/cli-harness"
 .claude-plugin/marketplace.json   name "cli-harness", owner {...}, plugins [{name "cli-harness", source "./", description}]

@@ -75,12 +75,26 @@ def version(ctx):
 
 
 IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+COLDEF = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*( [A-Za-z ]+)?$")
 
 
 def _ident(name: str) -> str:
     if not IDENT.match(name):
         raise click.ClickException(f"invalid identifier: {name!r}")
     return name
+
+
+def _coldef(defn: str) -> str:
+    if not COLDEF.match(defn):
+        raise click.ClickException(f"invalid column definition: {defn!r}")
+    return defn
+
+
+def _db(path: str) -> str:
+    """sqlite3 would parse a leading '-' as an option."""
+    if path.startswith("-"):
+        raise click.ClickException(f"database path may not start with '-': {path!r}")
+    return path
 
 
 def _lit(value: str) -> str:
@@ -90,7 +104,12 @@ def _lit(value: str) -> str:
 
 def _rows(stdout: str) -> list:
     """sqlite3 -json prints nothing at all for zero rows."""
-    return json.loads(stdout) if stdout.strip() else []
+    if not stdout.strip():
+        return []
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"sqlite3 returned non-JSON output: {exc}")
 
 
 @cli.command("create-table")
@@ -102,8 +121,8 @@ def _rows(stdout: str) -> list:
 @click.pass_context
 def create_table(ctx, db, table, columns, dry_run):
     """Create a table (and the database file if it does not exist)."""
-    sql = f"CREATE TABLE {_ident(table)} ({', '.join(columns)});"
-    result = run_backend([db, sql], dry_run=dry_run)
+    sql = f"CREATE TABLE {_ident(table)} ({', '.join(_coldef(c) for c in columns)});"
+    result = run_backend([_db(db), sql], dry_run=dry_run)
     emit(ctx, result if dry_run else {"db": db, "table": table, "created": True})
 
 
@@ -124,7 +143,7 @@ def insert(ctx, db, table, pairs, dry_run):
         cols.append(_ident(col))
         vals.append(_lit(val))
     sql = f"INSERT INTO {_ident(table)} ({', '.join(cols)}) VALUES ({', '.join(vals)});"
-    result = run_backend([db, sql], dry_run=dry_run)
+    result = run_backend([_db(db), sql], dry_run=dry_run)
     emit(ctx, result if dry_run else {"db": db, "table": table, "inserted": 1})
 
 
@@ -134,7 +153,9 @@ def insert(ctx, db, table, pairs, dry_run):
 @click.pass_context
 def query(ctx, db, sql):
     """Run a read-only SQL query and return the rows."""
-    result = run_backend(["-readonly", "-json", db, sql])
+    if any(line.lstrip().startswith(".") for line in sql.splitlines()):
+        raise click.ClickException("sqlite3 dot-commands are not allowed in query")
+    result = run_backend(["-readonly", "-json", _db(db), sql])
     emit(ctx, {"rows": _rows(result["stdout"])})
 
 
@@ -144,7 +165,9 @@ def query(ctx, db, sql):
 def tables(ctx, db):
     """List user tables in the database."""
     sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
-    result = run_backend(["-readonly", "-json", db, sql])
+    if any(line.lstrip().startswith(".") for line in sql.splitlines()):
+        raise click.ClickException("sqlite3 dot-commands are not allowed in query")
+    result = run_backend(["-readonly", "-json", _db(db), sql])
     emit(ctx, {"tables": [r["name"] for r in _rows(result["stdout"])]})
 
 

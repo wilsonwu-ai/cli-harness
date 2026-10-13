@@ -51,6 +51,7 @@ Then:
 - Add commands to cli.py with `@cli.command(...)`, each calling `run_backend([...])`. Call the real binary; never reimplement it.
 - Every mutating command gets a `--dry-run` option and must call `run_backend(..., dry_run=dry_run)`. validate checks this syntactically.
 - No passthrough "raw" command. Errors exit non-zero. Never swallow stderr.
+- Guard every user string that reaches the backend's argv (argument injection). Read GOTCHAS.md "Argument injection" and, for this binary, list what it treats specially: arguments starting with `-` (options), meta-commands (sqlite3 `.shell`/`.system` run a shell even with `-readonly`), statement separators (`;`) and file-path arguments. Allowlist identifiers with a regex, quote literals, and reject the rest with a ClickException. Add one test per vector that asserts non-zero exit AND an unchanged artifact.
 - Keep the `--json` group option and `emit()`.
 
 ## Phase 4: Test

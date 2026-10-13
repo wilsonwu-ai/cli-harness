@@ -112,3 +112,18 @@ def test_missing_binary_fails(tmp_path):
     proc = run("create-table", tmp_path / "y.db", "t", "--column", "x TEXT", env=env)
     assert proc.returncode != 0
     assert not (tmp_path / "y.db").exists()
+
+
+def test_injection_is_refused(tmp_path):
+    db = build(tmp_path)
+    marker = tmp_path / "pwned"
+    before = db.read_bytes()
+    for args in [("query", db, f".shell touch {marker}"),
+                 ("query", db, f"SELECT 1;\n.system touch {marker}"),
+                 ("create-table", db, "x", "--column", "a TEXT); CREATE TABLE evil(z"),
+                 ("insert", "-cmd", "people", "--set", "name=x")]:
+        proc = run(*args)
+        assert proc.returncode != 0, args
+    assert not marker.exists()
+    assert db.read_bytes() == before
+    assert py_rows(db, "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name") == [("people",)]

@@ -37,7 +37,7 @@ harness-<binary>/
 ## Safety model
 
 - Installed binaries only. The binary is resolved with `shutil.which`; nothing is cloned, downloaded or pip-installed.
-- Denylist. Binaries such as rm, dd, sudo, git, curl and ssh are refused before they are ever executed. Anything that moves money, deletes user data or touches credentials is refused too.
+- Denylist. Binaries such as rm, dd, sudo, git, curl and ssh are refused before they are ever executed. The SOP also tells the agent to refuse anything that moves money, deletes user data or touches credentials; only the denylist is enforced in code (by probe.py).
 - Dry-run. Every mutating command has `--dry-run`, and agents run it first.
 - Fail, not skip. A missing backend fails the tests; skip markers are rejected by the validator.
 - Artifact-verified tests. Tests check file bytes, row counts and durations, never exit codes alone.
