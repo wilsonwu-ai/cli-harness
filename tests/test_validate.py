@@ -19,13 +19,19 @@ def cli(as_json):
     """Root."""
 
 
+def run_backend(args, dry_run=False):
+    path = shutil.which("demo")
+    if dry_run:
+        return {"dry_run": True}
+    return subprocess.run([path, *args])
+
+
 @cli.command()
 @click.argument("name")
 @click.option("--dry-run", is_flag=True, help="Preview only.")
 def create(name, dry_run):
     """Create a thing."""
-    path = shutil.which("demo")
-    subprocess.run([path, name])
+    run_backend([name], dry_run=dry_run)
 '''
 
 META = {"binary": "demo", "version": "1.0", "description": "Demo wrapper.", "mutating": ["create"]}
@@ -108,7 +114,11 @@ def b_dry_run(d):
 
 
 def b_backend(d):
-    _sub(d / "cli.py", "subprocess", "sproc")
+    _sub(d / "cli.py", "    run_backend([name], dry_run=dry_run)", "    pass")
+
+
+def b_backend_no_dry(d):
+    _sub(d / "cli.py", "run_backend([name], dry_run=dry_run)", "run_backend([name])")
 
 
 def b_test_plan(d):
@@ -134,7 +144,8 @@ CASES = [
     ("cli_parses", b_cli_parses, False),
     ("json_flag", b_json_flag, False),
     ("dry_run", b_dry_run, False),
-    ("backend_call", b_backend, False),
+    ("backend_call", b_backend, True),
+    ("backend_call", b_backend_no_dry, True),
     ("test_plan", b_test_plan, True),
     ("tests_exist", b_tests_exist, True),
     ("no_skip", b_no_skip, True),
@@ -142,7 +153,7 @@ CASES = [
 ]
 
 
-@pytest.mark.parametrize("check,brk,exact", CASES, ids=[c[0] for c in CASES])
+@pytest.mark.parametrize("check,brk,exact", CASES, ids=[f"{c[0]}-{c[1].__name__}" for c in CASES])
 def test_break_one_check(harness, SCRIPTS, run_script, check, brk, exact):
     brk(harness)
     p = _run(run_script, SCRIPTS, harness)
@@ -158,3 +169,24 @@ def test_break_one_check(harness, SCRIPTS, run_script, check, brk, exact):
     by = {c["name"]: c for c in j["checks"]}
     assert by[check]["passed"] is False
     assert j["passed"] == sum(1 for c in j["checks"] if c["passed"])
+
+
+def test_skip_word_in_docstring_is_not_a_skip(harness, SCRIPTS, run_script):
+    (harness / "tests" / "test_x.py").write_text(
+        'def test_ok():\n    """Never use skipif or ' + SKIPWORD + ' here."""\n    # mark.skip is banned\n    assert True\n')
+    p = _run(run_script, SCRIPTS, harness)
+    assert p.returncode == 0, p.stdout
+    assert p.stdout.strip().splitlines()[-1] == "Overall: PASS (9/9 checks)"
+
+
+@pytest.mark.parametrize("body", [
+    "import pytest\n\n@pytest.mark.skipif(True, reason='x')\ndef test_s():\n    pass\n",
+    "import pytest\n\n@pytest.mark.skip\ndef test_s():\n    pass\n",
+    "import pytest\n\nmod = pytest.importorskip('x')\n",
+    "import pytest\nfrom pytest import skip\n\ndef test_s():\n    skip('x')\n",
+])
+def test_no_skip_catches_real_skips(harness, SCRIPTS, run_script, body):
+    (harness / "tests" / "test_x.py").write_text(body)
+    p = _run(run_script, SCRIPTS, harness)
+    assert p.returncode == 1
+    assert "[FAIL] no_skip:" in p.stdout
