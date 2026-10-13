@@ -1,0 +1,12 @@
+{
+  "name": "cli-harness",
+  "version": "0.1.0",
+  "description": "Wrap a CLI binary that is already installed on PATH into a tested, agent-ready harness: a thin Click wrapper, artifact-verified tests, and a generated SKILL.md.",
+  "author": {
+    "name": "Wilson Wu",
+    "url": "https://github.com/wilsonwu-ai"
+  },
+  "homepage": "https://github.com/wilsonwu-ai/cli-harness",
+  "license": "Apache-2.0",
+  "keywords": ["cli", "harness", "agents", "skills", "testing", "click"]
+}

@@ -1,0 +1,68 @@
+"""{{DESCRIPTION}}"""
+import json
+import shutil
+import subprocess
+
+import click
+
+BINARY = "{{BINARY}}"
+
+
+def run_backend(args: list[str], input: str | None = None, dry_run=False) -> dict:
+    """Run the real binary. Never swallows failures."""
+    if dry_run:
+        return {"dry_run": True, "would_run": [BINARY, *args]}
+    path = shutil.which(BINARY)
+    if path is None:
+        raise click.ClickException(f"{BINARY} not found on PATH")
+    proc = subprocess.run(
+        [path, *args],
+        input=input,
+        capture_output=True,
+        text=True,
+        stdin=subprocess.DEVNULL if input is None else None,
+    )
+    if proc.returncode != 0:
+        raise click.ClickException(proc.stderr.strip() or f"{BINARY} exited with {proc.returncode}")
+    return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
+
+
+def emit(ctx, data: dict):
+    """Print data as JSON in --json mode, else as readable lines."""
+    if ctx.obj and ctx.obj.get("json"):
+        click.echo(json.dumps(data))
+    else:
+        for key, value in data.items():
+            click.echo(f"{key}: {value}")
+
+
+@click.group()
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable JSON output.")
+@click.pass_context
+def cli(ctx, as_json):
+    """{{DESCRIPTION}}"""
+    ctx.obj = {"json": as_json}
+
+
+@cli.command()
+@click.pass_context
+def version(ctx):
+    """Show the backend binary version."""
+    last_error = None
+    for flag in ("--version", "-version"):
+        try:
+            result = run_backend([flag])
+        except click.ClickException as exc:
+            if "not found on PATH" in exc.format_message():
+                raise
+            last_error = exc
+            continue
+        lines = [ln.strip() for ln in (result["stdout"] + result["stderr"]).splitlines() if ln.strip()]
+        if lines:
+            emit(ctx, {"binary": BINARY, "version": lines[0]})
+            return
+    raise last_error or click.ClickException(f"could not read {BINARY} version")
+
+
+if __name__ == "__main__":
+    cli()

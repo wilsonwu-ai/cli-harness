@@ -1,0 +1,18 @@
+# Test plan: {{BINARY}} harness
+
+## Workflows
+
+1. <Workflow name>: <what the user does with {{BINARY}}>. Artifact check: <the file, row count, byte signature or measured value that proves it worked>.
+2. <Workflow name>: <description>. Artifact check: <proof>.
+3. <Workflow name>: <description>. Artifact check: <proof>.
+
+## Artifact checks
+
+- <Check 1: for example, output file starts with the expected magic bytes>
+- <Check 2: for example, row count equals the number inserted>
+- A missing {{BINARY}} must FAIL the tests, never skip them.
+- Every mutating command is exercised with --dry-run and the target is confirmed unchanged.
+
+## Results
+
+<Paste the pytest summary line here after Phase 4.>

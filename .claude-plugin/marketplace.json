@@ -1,0 +1,17 @@
+{
+  "name": "cli-harness",
+  "metadata": {
+    "description": "Turn an installed CLI binary into a tested, agent-ready harness."
+  },
+  "owner": {
+    "name": "Wilson Wu",
+    "url": "https://github.com/wilsonwu-ai"
+  },
+  "plugins": [
+    {
+      "name": "cli-harness",
+      "source": "./",
+      "description": "Wrap a CLI binary already installed on PATH into a tested Click harness with a generated SKILL.md. Installed binaries only, denylist, dry-run on mutating commands, and artifact-verified tests."
+    }
+  ]
+}

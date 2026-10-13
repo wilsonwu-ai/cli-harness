@@ -1,0 +1,12 @@
+cli-harness
+Copyright 2026 Wilson Wu
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The methodology (turning an installed CLI binary into a tested, agent-ready
+harness) is credited to the HKUDS/CLI-Anything project
+(https://github.com/HKUDS/CLI-Anything, Apache-2.0) and to the accompanying
+paper, arXiv 2606.03854.
+
+No upstream code was copied. All code and text in this repository were written
+independently.
