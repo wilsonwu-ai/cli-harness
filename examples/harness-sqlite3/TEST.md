@@ -18,4 +18,4 @@
 
 ## Results
 
-`7 passed in 1.49s`
+`7 passed`

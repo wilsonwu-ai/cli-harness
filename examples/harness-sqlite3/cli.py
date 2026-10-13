@@ -9,22 +9,30 @@ import click
 BINARY = "sqlite3"
 
 
-def run_backend(args: list[str], input: str | None = None, dry_run=False) -> dict:
+def run_backend(args: list[str], input: str | None = None, dry_run=False, timeout: float = 60) -> dict:
     """Run the real binary. Never swallows failures."""
+    # A dry run intentionally skips the PATH check so plans can be previewed anywhere.
     if dry_run:
         return {"dry_run": True, "would_run": [BINARY, *args]}
     path = shutil.which(BINARY)
     if path is None:
         raise click.ClickException(f"{BINARY} not found on PATH")
-    proc = subprocess.run(
-        [path, *args],
-        input=input,
-        capture_output=True,
-        text=True,
-        stdin=subprocess.DEVNULL if input is None else None,
-    )
+    try:
+        proc = subprocess.run(
+            [path, *args],
+            input=input,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL if input is None else None,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        raise click.ClickException(f"{BINARY} timed out after {timeout} seconds")
     if proc.returncode != 0:
-        raise click.ClickException(proc.stderr.strip() or f"{BINARY} exited with {proc.returncode}")
+        message = proc.stderr.strip()
+        if message.startswith("Error: "):
+            message = message[len("Error: "):]
+        raise click.ClickException(message or f"{BINARY} exited with {proc.returncode}")
     return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
@@ -34,7 +42,8 @@ def emit(ctx, data: dict):
         click.echo(json.dumps(data))
     else:
         for key, value in data.items():
-            click.echo(f"{key}: {value}")
+            shown = json.dumps(value) if isinstance(value, (list, dict)) else value
+            click.echo(f"{key}: {shown}")
 
 
 @click.group()

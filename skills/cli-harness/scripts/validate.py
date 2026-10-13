@@ -10,7 +10,8 @@ import gen_skill  # noqa: E402
 
 CHECK_NAMES = ["harness_json", "cli_parses", "json_flag", "dry_run", "backend_call",
                "test_plan", "tests_exist", "no_skip", "skill_md_sync"]
-SKIP_TOKENS = ("pytest.skip", "mark.skip", "skipif", "importorskip")
+SKIP_CALLS = {"skip", "importorskip"}
+SKIP_MARKS = {"skip", "skipif", "xfail"}
 META_KEYS = ("binary", "version", "description", "mutating")
 
 
@@ -43,6 +44,56 @@ def _load_parsed(d):
         return None, None, f"cli.py syntax error: {e}"
 
 
+def _calls_run_backend_with_dry_run(func):
+    for n in ast.walk(func):
+        if isinstance(n, ast.Call):
+            f = n.func
+            name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+            if name == "run_backend" and any(k.arg == "dry_run" for k in n.keywords):
+                return True
+    return False
+
+
+def _backend_problems(src, parsed, mutating):
+    miss = [t for t in ("shutil.which", "subprocess") if t not in src]
+    problems = ["cli.py lacks: " + ", ".join(miss)] if miss else []
+    funcs = {n.name: n for n in ast.walk(ast.parse(src))
+             if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    cmds = {c["name"]: c["func"] for c in parsed["commands"]}
+    bad = [m for m in mutating if m not in cmds or cmds[m] not in funcs
+           or not _calls_run_backend_with_dry_run(funcs[cmds[m]])]
+    if bad:
+        problems.append("mutating command body lacks run_backend(..., dry_run=...): " + ", ".join(bad))
+    return problems
+
+
+def _skip_uses(tree):
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Call):
+            f = n.func
+            name = f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else None
+            if name in SKIP_CALLS:
+                return True
+        elif isinstance(n, ast.Attribute) and n.attr in SKIP_MARKS:
+            v = n.value
+            if (isinstance(v, ast.Attribute) and v.attr == "mark") or (isinstance(v, ast.Name) and v.id == "mark"):
+                return True
+    return False
+
+
+def _skip_offenders(files):
+    out = []
+    for f in files:
+        try:
+            tree = ast.parse(f.read_text())
+        except (SyntaxError, ValueError):
+            out.append(f"{f.name} (does not parse)")
+            continue
+        if _skip_uses(tree):
+            out.append(f.name)
+    return out
+
+
 def run_checks(harness_dir):
     d = Path(harness_dir)
     meta, meta_msg = _load_meta(d)
@@ -73,8 +124,11 @@ def run_checks(harness_dir):
     if src is None:
         rec("backend_call", False, parse_msg)
     else:
-        miss = [t for t in ("shutil.which", "subprocess") if t not in src]
-        rec("backend_call", not miss, "calls the real binary" if not miss else "cli.py lacks: " + ", ".join(miss))
+        try:
+            probs = _backend_problems(src, parsed, meta["mutating"] if meta else [])
+        except SyntaxError as e:
+            probs = [f"cli.py syntax error: {e}"]
+        rec("backend_call", not probs, "calls the real binary" if not probs else "; ".join(probs))
 
     tm = d / "TEST.md"
     has_plan = tm.is_file() and any(l.startswith("## Workflows") for l in tm.read_text().splitlines())
@@ -84,7 +138,7 @@ def run_checks(harness_dir):
     rec("tests_exist", bool(tests), f"{len(tests)} test file(s)" if tests else "no tests/test_*.py")
 
     all_py = sorted((d / "tests").glob("*.py")) if (d / "tests").is_dir() else []
-    offenders = [f.name for f in all_py if any(t in f.read_text() for t in SKIP_TOKENS)]
+    offenders = _skip_offenders(all_py)
     rec("no_skip", not offenders, "no skips in tests" if not offenders else "skip found in: " + ", ".join(offenders))
 
     sk = d / "SKILL.md"

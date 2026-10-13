@@ -17,7 +17,7 @@ This skill turns one installed executable into a harness at `./harness-<binary>/
 
 ## Paths
 
-Paths are relative to this skill directory. When installed as a plugin the directory is `${CLAUDE_PLUGIN_ROOT}/skills/cli-harness`. When copied by hand it is `~/.claude/skills/cli-harness`.
+Paths are relative to this skill directory. When installed as a plugin the directory is `${CLAUDE_PLUGIN_ROOT}/skills/cli-harness`. When copied by hand it is `~/.claude/skills/cli-harness`. If neither path exists, use the directory containing this SKILL.md.
 
 - `scripts/probe.py` : resolve and probe the binary (exit 2 not found, exit 3 denylisted)
 - `scripts/gen_skill.py` : generate the harness SKILL.md from cli.py
