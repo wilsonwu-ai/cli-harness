@@ -121,7 +121,10 @@ def test_injection_is_refused(tmp_path):
     for args in [("query", db, f".shell touch {marker}"),
                  ("query", db, f"SELECT 1;\n.system touch {marker}"),
                  ("create-table", db, "x", "--column", "a TEXT); CREATE TABLE evil(z"),
-                 ("insert", "-cmd", "people", "--set", "name=x")]:
+                 ("insert", "-cmd", "people", "--set", "name=x"),
+                 ("query", db, f"SELECT writefile('{marker}','x')"),
+                 ("query", db, f"SELECT edit('x','touch {marker}')"),
+                 ("query", db, "-cmd")]:
         proc = run(*args)
         assert proc.returncode != 0, args
     assert not marker.exists()

@@ -122,7 +122,7 @@ def _rows(stdout: str) -> list:
 def create_table(ctx, db, table, columns, dry_run):
     """Create a table (and the database file if it does not exist)."""
     sql = f"CREATE TABLE {_ident(table)} ({', '.join(_coldef(c) for c in columns)});"
-    result = run_backend([_db(db), sql], dry_run=dry_run)
+    result = run_backend(["-safe", _db(db), sql], dry_run=dry_run)
     emit(ctx, result if dry_run else {"db": db, "table": table, "created": True})
 
 
@@ -143,7 +143,7 @@ def insert(ctx, db, table, pairs, dry_run):
         cols.append(_ident(col))
         vals.append(_lit(val))
     sql = f"INSERT INTO {_ident(table)} ({', '.join(cols)}) VALUES ({', '.join(vals)});"
-    result = run_backend([_db(db), sql], dry_run=dry_run)
+    result = run_backend(["-safe", _db(db), sql], dry_run=dry_run)
     emit(ctx, result if dry_run else {"db": db, "table": table, "inserted": 1})
 
 
@@ -153,9 +153,9 @@ def insert(ctx, db, table, pairs, dry_run):
 @click.pass_context
 def query(ctx, db, sql):
     """Run a read-only SQL query and return the rows."""
-    if any(line.lstrip().startswith(".") for line in sql.splitlines()):
-        raise click.ClickException("sqlite3 dot-commands are not allowed in query")
-    result = run_backend(["-readonly", "-json", _db(db), sql])
+    if sql.lstrip().startswith("-") or any(line.lstrip().startswith(".") for line in sql.splitlines()):
+        raise click.ClickException("sqlite3 dot-commands and option-like SQL are not allowed in query")
+    result = run_backend(["-safe", "-readonly", "-json", _db(db), sql])
     emit(ctx, {"rows": _rows(result["stdout"])})
 
 
@@ -165,9 +165,9 @@ def query(ctx, db, sql):
 def tables(ctx, db):
     """List user tables in the database."""
     sql = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
-    if any(line.lstrip().startswith(".") for line in sql.splitlines()):
-        raise click.ClickException("sqlite3 dot-commands are not allowed in query")
-    result = run_backend(["-readonly", "-json", _db(db), sql])
+    if sql.lstrip().startswith("-") or any(line.lstrip().startswith(".") for line in sql.splitlines()):
+        raise click.ClickException("sqlite3 dot-commands and option-like SQL are not allowed in query")
+    result = run_backend(["-safe", "-readonly", "-json", _db(db), sql])
     emit(ctx, {"tables": [r["name"] for r in _rows(result["stdout"])]})
 
 
@@ -180,7 +180,7 @@ def schema(ctx, db, table):
     sql = "SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL"
     if table:
         sql += f" AND tbl_name={_lit(table)}"
-    result = run_backend(["-readonly", "-json", db, sql + " ORDER BY name;"])
+    result = run_backend(["-safe", "-readonly", "-json", _db(db), sql + " ORDER BY name;"])
     emit(ctx, {"schema": _rows(result["stdout"])})
 
 

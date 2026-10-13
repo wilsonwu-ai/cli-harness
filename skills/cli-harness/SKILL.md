@@ -13,7 +13,7 @@ Read SOP.md in this directory before doing anything. Do not improvise.
 
 ## Scope
 
-This skill turns one installed executable into a harness at `./harness-<binary>/`: a thin Click wrapper that shells out to the real binary, a test plan written before code, tests that verify real artifacts, and a SKILL.md generated from the code. It never clones, downloads or pip-installs anything, and it refuses binaries on the denylist or ones that move money, delete user data or touch credentials. Done means `validate.py` prints `Overall: PASS (9/9 checks)` and pytest is green.
+This skill turns one installed executable into a harness at `./harness-<binary>/`: a thin Click wrapper that shells out to the real binary, a test plan written before code, tests that verify real artifacts, and a SKILL.md generated from the code. It never clones, downloads or pip-installs anything, probe.py refuses binaries on the denylist, and the SOP instructs the agent to refuse ones that move money, delete user data or touch credentials. Done means `validate.py` prints `Overall: PASS (9/9 checks)` and pytest is green.
 
 ## Paths
 
