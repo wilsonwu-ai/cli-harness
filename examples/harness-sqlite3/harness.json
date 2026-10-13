@@ -1,0 +1,9 @@
+{
+  "binary": "sqlite3",
+  "version": "3.45.3",
+  "description": "Create, fill and query SQLite databases through the sqlite3 binary.",
+  "mutating": [
+    "create-table",
+    "insert"
+  ]
+}

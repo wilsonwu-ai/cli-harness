@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cli-harness, explained like you are 5</title>
+<style>
+  :root {
+    --bg: #fffaf0; --card: #ffffff; --ink: #1f2430; --muted: #566074;
+    --accent: #2f6fed; --good: #1f9d55; --bad: #d8453a; --warn: #e59a00;
+    --line: #e6dfcf; --soft: #eef3ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c; --card: #1b2030; --ink: #eef1f7; --muted: #9aa5bd;
+      --accent: #7aa2ff; --good: #4cd08a; --bad: #ff7a70; --warn: #ffc247;
+      --line: #2b3247; --soft: #1f2744;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 20px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 18px 64px; }
+  h1 { font-size: 2.1rem; line-height: 1.15; margin: 8px 0 6px; }
+  h2 { font-size: 1.5rem; margin: 0 0 8px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); }
+  section { margin: 28px 0; }
+  .card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 20px; padding: 18px 20px;
+  }
+  .pic { display: block; margin: 8px auto 12px; max-width: 100%; height: auto; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > .card { flex: 1 1 240px; }
+  .big { font-size: 1.25rem; font-weight: 700; }
+  .tag {
+    display: inline-block; font-size: .8rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 999px; background: var(--soft); color: var(--accent);
+  }
+  ol.steps { list-style: none; padding: 0; margin: 0; counter-reset: s -1; }
+  ol.steps li {
+    counter-increment: s; display: flex; gap: 14px; align-items: flex-start;
+    background: var(--card); border: 2px solid var(--line); border-radius: 18px;
+    padding: 12px 16px; margin: 10px 0;
+  }
+  ol.steps li::before {
+    content: counter(s); flex: 0 0 auto; width: 2.2rem; height: 2.2rem;
+    border-radius: 50%; background: var(--accent); color: var(--bg);
+    font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  ol.steps b { display: block; }
+  .rules { list-style: none; padding: 0; margin: 0; }
+  .rules li { padding: 10px 0; border-bottom: 2px dashed var(--line); }
+  .rules li:last-child { border-bottom: 0; }
+  .rules b { color: var(--accent); }
+  code {
+    background: var(--soft); padding: 1px 7px; border-radius: 8px;
+    font: .85em ui-monospace, Menlo, Consolas, monospace; word-break: break-word;
+  }
+  .done { text-align: center; border-color: var(--good); }
+  .done .check { font: 800 1.35rem ui-monospace, Menlo, Consolas, monospace; color: var(--good); }
+  a { color: var(--accent); }
+  footer { margin-top: 36px; color: var(--muted); font-size: .85rem; }
+  @media (max-width: 480px) { body { font-size: 18px; } h1 { font-size: 1.7rem; } }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <span class="tag">cli-harness</span>
+  <h1>A safe remote control for a grown-up computer program</h1>
+  <p class="sub">Explained like you are 5.</p>
+</header>
+
+<section>
+  <h2>1. The problem</h2>
+  <svg class="pic" role="img" aria-label="A confused robot looking at a pile of buttons and a blank text box" width="420" height="150" viewBox="0 0 420 150">
+    <rect x="20" y="30" width="110" height="90" rx="14" fill="none" stroke="currentColor" stroke-width="4"/>
+    <circle cx="48" cy="58" r="9" fill="#d8453a"/><circle cx="82" cy="58" r="9" fill="#e59a00"/><circle cx="116" cy="58" r="9" fill="#2f6fed"/>
+    <circle cx="48" cy="92" r="9" fill="#1f9d55"/><circle cx="82" cy="92" r="9" fill="#2f6fed"/><circle cx="116" cy="92" r="9" fill="#d8453a"/>
+    <rect x="290" y="30" width="110" height="90" rx="14" fill="none" stroke="currentColor" stroke-width="4"/>
+    <text x="305" y="82" font-size="30" font-family="monospace" fill="currentColor">$ ???_</text>
+    <rect x="175" y="45" width="70" height="60" rx="14" fill="none" stroke="currentColor" stroke-width="4"/>
+    <circle cx="198" cy="70" r="6" fill="currentColor"/><circle cx="222" cy="70" r="6" fill="currentColor"/>
+    <path d="M196 92 q14 -10 28 0" fill="none" stroke="currentColor" stroke-width="4"/>
+    <text x="190" y="28" font-size="26" font-family="sans-serif" fill="currentColor">? ? ?</text>
+  </svg>
+  <div class="card">
+    <p class="big">AI agents are clumsy with apps and text commands.</p>
+    <p>Clicking around an app is slow and easy to get wrong. Typing a command line program's options from a guess is risky too. Guess wrong, and something real can break.</p>
+  </div>
+</section>
+
+<section>
+  <h2>2. What cli-harness does</h2>
+  <svg class="pic" role="img" aria-label="A program box connected by a wrapper to a remote control and an instruction card" width="440" height="150" viewBox="0 0 440 150">
+    <rect x="15" y="40" width="100" height="70" rx="12" fill="none" stroke="currentColor" stroke-width="4"/>
+    <text x="30" y="82" font-size="20" font-family="monospace" fill="currentColor">sqlite3</text>
+    <path d="M118 75 h60" stroke="currentColor" stroke-width="4"/>
+    <polygon points="178,67 194,75 178,83" fill="currentColor"/>
+    <rect x="198" y="30" width="80" height="90" rx="16" fill="#2f6fed"/>
+    <circle cx="226" cy="58" r="8" fill="#fff"/><circle cx="252" cy="58" r="8" fill="#fff"/>
+    <rect x="214" y="80" width="48" height="12" rx="6" fill="#fff"/>
+    <rect x="214" y="100" width="48" height="8" rx="4" fill="#fff"/>
+    <path d="M281 75 h30" stroke="currentColor" stroke-width="4"/>
+    <polygon points="311,67 327,75 311,83" fill="currentColor"/>
+    <rect x="332" y="35" width="90" height="80" rx="8" fill="none" stroke="currentColor" stroke-width="4"/>
+    <path d="M345 58 h64 M345 76 h64 M345 94 h40" stroke="currentColor" stroke-width="4"/>
+  </svg>
+  <div class="card">
+    <p class="big">It wraps a program you already have in a remote control.</p>
+    <p>You pick one program that is already installed, like <code>sqlite3</code>. The skill builds a small, tested wrapper that talks to the real program. It also writes an instruction card so an agent knows which buttons exist and how to press them.</p>
+    <p class="sub">You type <code>/cli-harness sqlite3</code> and get a folder called <code>harness-sqlite3</code>.</p>
+  </div>
+</section>
+
+<section>
+  <h2>3. The story in 7 steps</h2>
+  <p class="sub">The recipe is called the SOP. The steps go in order, and none are skipped.</p>
+  <ol class="steps">
+    <li><div><b>Phase 0: Can we even do this?</b>Look for the program. Not installed? Stop. On the do-not-touch list? Stop. Does it move money, delete your stuff or touch passwords? Stop.</div></li>
+    <li><div><b>Phase 1: Look at it</b>Read the program's own help. Pick at most 6 buttons for the remote. Mark the ones that change things.</div></li>
+    <li><div><b>Phase 2: Make a plan</b>Write down what we will try and how we will prove it worked. This happens before any code.</div></li>
+    <li><div><b>Phase 3: Build the remote</b>Make the wrapper. Every button that changes things gets a practice mode called <code>--dry-run</code>. The wrapper calls the real program and never pretends to be it.</div></li>
+    <li><div><b>Phase 4: Test it</b>Run the tests. They look at the real result, like a file's bytes or a count of rows. A missing program makes a test fail, not skip.</div></li>
+    <li><div><b>Phase 5: Write the instruction card</b>A script makes the card (a file called SKILL.md) straight from the code. Nobody types it by hand.</div></li>
+    <li><div><b>Phase 6: Are we done?</b>Run the checker and the tests. Both must pass. See below.</div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>4. The safety rules</h2>
+  <div class="card">
+    <ul class="rules">
+      <li><b>Installed only.</b> It uses programs already on your computer. It never clones, downloads or installs anything.</li>
+      <li><b>A do-not-touch list.</b> Programs like <code>rm</code>, <code>dd</code>, <code>sudo</code>, <code>git</code>, <code>curl</code> and <code>ssh</code> are refused before they ever run. Anything that moves money, deletes user data or touches credentials is refused too.</li>
+      <li><b>Practice first.</b> Buttons that change things have <code>--dry-run</code>, which shows what would happen without doing it. Agents press that first.</li>
+      <li><b>Fail, do not skip.</b> If the real program is missing, the test fails loudly. Skipping a test is not allowed, and the checker rejects skip markers.</li>
+      <li><b>Check the actual output.</b> A test never trusts "it said OK" alone. It opens the file, counts the rows or measures the length.</li>
+      <li><b>No secret back door, and no hiding errors.</b> There is no "run anything" button, and errors always end with a non-zero exit.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>5. How we know it is done</h2>
+  <div class="card done">
+    <p class="big">Two things must both be true.</p>
+    <p class="check">Overall: PASS (9/9 checks)</p>
+    <p>The checker passes all 9 of its checks, <b>and</b> the tests are green.</p>
+    <p class="sub">Nothing else counts. Not "it looks fine" and not "it ran once."</p>
+  </div>
+</section>
+
+<section>
+  <h2>6. Who thought of it first</h2>
+  <div class="card">
+    <p>The method is inspired by <b>HKUDS CLI-Anything</b> (Apache-2.0) and its paper, arXiv 2606.03854. cli-harness did not copy their code. It is a new, smaller take on the idea.</p>
+    <p><a href="https://github.com/HKUDS/CLI-Anything">github.com/HKUDS/CLI-Anything</a></p>
+  </div>
+</section>
+
+<footer>
+  cli-harness v1 by Wilson Wu, Apache-2.0. For the grown-up picture, see the architecture page in this docs folder.
+</footer>
+
+</main>
+</body>
+</html>
